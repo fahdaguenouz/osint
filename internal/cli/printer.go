@@ -40,8 +40,12 @@ func PrintResult(w io.Writer, r core.Result) {
 			fmt.Fprintf(w, "Country: %s\n", r.IP.Country)
 		}
 		if r.IP.ASN != "" {
-			fmt.Fprintf(w, "ASN: %s\n", r.IP.ASN)
+			fmt.Fprintf(w, "ASN: %s\n", r.IP.ASN)	
 		}
+		if r.IP.Lat != 0 || r.IP.Lon != 0 {
+			fmt.Fprintf(w, "Lat/Lon: %.4f, %.4f\n", r.IP.Lat, r.IP.Lon)
+		}
+		// Abuse data
 		if r.IP.KnownIssues != "" {
 			fmt.Fprintf(w, "Known Issues: %s\n", r.IP.KnownIssues)
 		} else {
@@ -66,14 +70,14 @@ func PrintResult(w io.Writer, r core.Result) {
 	case core.KindDomain: // NEW: Add domain output
 		fmt.Fprintf(w, "Main Domain: %s\n", r.Input)
 		fmt.Fprintf(w, "\nSubdomains found: %d\n", len(r.Domain.Subdomains))
-		
+
 		for _, sub := range r.Domain.Subdomains {
 			ip := sub.IP
 			if ip == "" {
 				ip = "unresolved"
 			}
 			fmt.Fprintf(w, "  - %s (IP: %s)\n", sub.Name, ip)
-			
+
 			if sub.SSLValid {
 				fmt.Fprintf(w, "    SSL Certificate: Valid until %s\n", sub.SSLExpiry)
 			}

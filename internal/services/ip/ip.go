@@ -2,6 +2,7 @@ package ip
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -19,29 +20,50 @@ func Run(query string) (core.Result, error) {
 
 	r := core.NewBaseResult(core.KindIP, q)
 
-	// Provider (ip-api.com)
-	provider := NewIPAPIProvider()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+	// Create context with timeout for all operations
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	isp, city, lat, lon, source, err := provider.Lookup(ctx, q)
+	// 1. Get geolocation data from ip-api.com (free, no key required)
+	geoProvider := NewIPAPIProvider()
+	isp, city, country, asn, lat, lon, geoSource, err := geoProvider.Lookup(ctx, q)
 	if err != nil {
-		// Put the error inside Result for printing/logging,
-		// but also return err so main exits with code 1 if you want.
-		fail := core.Fail(core.KindIP, q, err)
-		fail.Sources = append(fail.Sources, source)
-		return fail, err
+		r.Warnings = append(r.Warnings, fmt.Sprintf("Geolocation lookup failed: %v", err))
+	}
+	r.Sources = append(r.Sources, geoSource)
+
+	// 2. Check abuse reputation from AbuseIPDB (optional, requires API key)
+	abuseProvider := NewAbuseIPDBProvider()
+	abuseScore, abuseReports, lastReported, abuseSource, abuseErr := abuseProvider.CheckIP(ctx, q)
+	if abuseErr != nil {
+		// Only warn, don't fail - this is optional enhancement
+		r.Warnings = append(r.Warnings, fmt.Sprintf("Abuse check skipped: %v", abuseErr))
+	} else {
+		r.Sources = append(r.Sources, abuseSource)
 	}
 
+	// Build the result
 	r.IP = core.IPResult{
-		IP:   q,
-		ISP:  isp,
-		City: city,
-		Lat:  lat,
-		Lon:  lon,
+		IP:           q,
+		ISP:          isp,
+		City:         city,
+		Country:      country,
+		ASN:          asn,
+		Lat:          lat,
+		Lon:          lon,
+		AbuseScore:   abuseScore,
+		AbuseReports: abuseReports,
 	}
-	r.Sources = append(r.Sources, source)
+
+	// Format known issues message
+	if abuseErr != nil || abuseScore == 0 {
+		r.IP.KnownIssues = "No reported abuse"
+	} else {
+		r.IP.KnownIssues = fmt.Sprintf("Abuse confidence: %d%% (%d reports)", abuseScore, abuseReports)
+		if lastReported != "" {
+			r.IP.KnownIssues += fmt.Sprintf(", last reported: %s", lastReported)
+		}
+	}
 
 	return r, nil
 }

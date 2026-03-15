@@ -36,16 +36,17 @@ type FullNameResult struct {
 }
 
 type IPResult struct {
-	IP          string
-	ISP         string
-	City        string
-	Country     string // NEW
-	ASN         string // NEW
-	Lat         float64
-	Lon         float64
-	KnownIssues string // NEW: "No reported abuse" or details
+	IP           string
+	ISP          string
+	City         string
+	Country      string
+	ASN          string
+	Lat          float64
+	Lon          float64
+	AbuseScore   int    // 0-100 from AbuseIPDB
+	AbuseReports int    // Total number of reports
+	KnownIssues  string // Formatted summary
 }
-
 type UsernameResult struct {
 	Username string
 	Networks []NetworkResult

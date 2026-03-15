@@ -80,25 +80,28 @@ func formatForFile(r core.Result) string {
 		}
 
 	case core.KindIP:
-		// Match required output format exactly
-		if r.IP.ISP != "" {
-			b.WriteString(fmt.Sprintf("ISP: %s\n", r.IP.ISP))
-		}
-		if r.IP.City != "" {
-			b.WriteString(fmt.Sprintf("City: %s\n", r.IP.City))
-		}
-		if r.IP.Country != "" {
-			b.WriteString(fmt.Sprintf("Country: %s\n", r.IP.Country))
-		}
-		if r.IP.ASN != "" {
-			b.WriteString(fmt.Sprintf("ASN: %s\n", r.IP.ASN))
-		}
-		// Abuse data
-		if r.IP.KnownIssues != "" {
-			b.WriteString(fmt.Sprintf("Known Issues: %s\n", r.IP.KnownIssues))
-		} else {
-			b.WriteString("Known Issues: No reported abuse\n")
-		}
+	// Match required output format exactly
+	if r.IP.ISP != "" {
+		b.WriteString(fmt.Sprintf("ISP: %s\n", r.IP.ISP))
+	}
+	if r.IP.City != "" {
+		b.WriteString(fmt.Sprintf("City: %s\n", r.IP.City))
+	}
+	if r.IP.Country != "" {
+		b.WriteString(fmt.Sprintf("Country: %s\n", r.IP.Country))
+	}
+	if r.IP.ASN != "" {
+		b.WriteString(fmt.Sprintf("ASN: %s\n", r.IP.ASN))
+	}
+	if r.IP.Lat != 0 || r.IP.Lon != 0 {
+		b.WriteString(fmt.Sprintf("Lat/Lon: %.4f / %.4f\n", r.IP.Lat, r.IP.Lon))
+	}
+	// Abuse data
+	if r.IP.KnownIssues != "" {
+		b.WriteString(fmt.Sprintf("Known Issues: %s\n", r.IP.KnownIssues))
+	} else {
+		b.WriteString("Known Issues: No reported abuse\n")
+	}
 
 	case core.KindUsername:
 		for _, n := range r.Username.Networks {

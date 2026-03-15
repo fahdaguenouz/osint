@@ -8,7 +8,6 @@ import (
 	"osint/internal/core"
 	"osint/internal/output"
 	"osint/internal/services/domain"
-	"osint/internal/services/fullname"
 	"osint/internal/services/ip"
 	"osint/internal/services/username"
 )
@@ -31,8 +30,6 @@ func main() {
 	)
 
 	switch opts.Mode {
-	case cli.ModeFullName:
-		res, runErr = fullname.Run(opts.Query)
 	case cli.ModeIP:
 		res, runErr = ip.Run(opts.Query)
 	case cli.ModeUsername:

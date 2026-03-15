@@ -1,26 +1,9 @@
-Main Domain: example.com
-
-Subdomains found: 10
-  - user@example.com (IP: )
-    SSL Certificate: Not found
-  - as207960 test intermediate - example.com (IP: )
-    SSL Certificate: Not found
-  - subjectname@example.com (IP: )
-    SSL Certificate: Not found
-  - example.com (IP: 2606:4700::6812:1b78)
-    SSL Certificate: Valid until 2026-05-14
-  - www.example.com (IP: 2606:4700::6812:1b78)
-    SSL Certificate: Valid until 2026-05-14
-  - m.testexample.com (IP: 13.248.169.48)
-    SSL Certificate: Not found
-  - m.example.com (IP: )
-    SSL Certificate: Not found
-  - products.example.com (IP: )
-    SSL Certificate: Not found
-  - support.example.com (IP: )
-    SSL Certificate: Not found
-  - dev.example.com (IP: )
-    SSL Certificate: Not found
+ISP: Google LLC
+City: Ashburn
+Country: United States
+ASN: AS15169 Google LLC
+Lat/Lon: 39.0300 / -77.5000
+Known Issues: No reported abuse
 
 Data saved in result file
-Timestamp: 2026-03-15T16:48:11Z
+Timestamp: 2026-03-15T16:51:34Z
