@@ -8,24 +8,21 @@ const (
 	KindFullName Kind = "full-name"
 	KindIP       Kind = "ip"
 	KindUsername Kind = "username"
-	KindDomain   Kind = "domain" // NEW: for subdomain enumeration
+	KindDomain   Kind = "domain"
 )
 
 type Result struct {
 	Kind      Kind
 	Input     string
 	Timestamp time.Time
+	Sources   []string
+	Warnings  []string
+	Error     string
 
-	// Unified metadata
-	Sources  []string
-	Warnings []string
-	Error    string // empty = success
-
-	// Payload (only one should be filled depending on Kind)
 	FullName FullNameResult
 	IP       IPResult
 	Username UsernameResult
-	Domain   DomainResult // NEW
+	Domain   DomainResult
 }
 
 type FullNameResult struct {
@@ -43,22 +40,26 @@ type IPResult struct {
 	ASN          string
 	Lat          float64
 	Lon          float64
-	AbuseScore   int    // 0-100 from AbuseIPDB
-	AbuseReports int    // Total number of reports
-	KnownIssues  string // Formatted summary
+	AbuseScore   int
+	AbuseReports int
+	KnownIssues  string
 }
+
 type UsernameResult struct {
-	Username string
-	Networks []NetworkResult
+	Username     string
+	Networks     []NetworkResult
+	RecentActivity string // Summary of recent activity across platforms
 }
 
 type NetworkResult struct {
-	Name  string
-	URL   string
-	Found bool
+	Name        string
+	URL         string
+	Found       bool
+	ProfileInfo string // Bio/description if available
+	Followers   string   // Follower count if available
+	LastActive  string   // Last activity date if available
 }
 
-// NEW: Domain result structures
 type DomainResult struct {
 	Domain     string
 	Subdomains []SubdomainInfo
@@ -70,10 +71,8 @@ type SubdomainInfo struct {
 	CNAME        string
 	SSLValid     bool
 	SSLExpiry    string
-	TakeoverRisk string // "none", "potential", or specific message
+	TakeoverRisk string
 }
-
-// ---- Constructors ----
 
 func NewBaseResult(kind Kind, input string) Result {
 	return Result{

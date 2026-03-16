@@ -23,31 +23,45 @@ func Run(query string) (core.Result, error) {
 	r.Username.Username = handle
 
 	client := &http.Client{
-		Timeout: 7 * time.Second,
+		Timeout: 10 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			// do not follow redirects automatically
-			return http.ErrUseLastResponse
+			return http.ErrUseLastResponse // Don't auto-follow redirects
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 
 	results := make([]core.NetworkResult, 0, len(DefaultNetworks))
+	var activePlatforms []string
 
 	for _, netw := range DefaultNetworks {
 		url := netw.URL(handle)
 
-		found, warn := checkProfile(ctx, client, netw.Name, url, handle)
+		found, profileInfo, followers, lastActive, warn := checkProfileDetailed(ctx, client, netw.Name, url, handle)
 		if warn != "" {
 			r.Warnings = append(r.Warnings, warn)
 		}
 
+		if found {
+			activePlatforms = append(activePlatforms, netw.Name)
+		}
+
 		results = append(results, core.NetworkResult{
-			Name:  netw.Name,
-			URL:   url,
-			Found: found,
+			Name:        netw.Name,
+			URL:         url,
+			Found:       found,
+			ProfileInfo: profileInfo,
+			Followers:   followers,
+			LastActive:  lastActive,
 		})
+	}
+
+	// Generate activity summary
+	if len(activePlatforms) > 0 {
+		r.Username.RecentActivity = "Active on: " + strings.Join(activePlatforms, ", ")
+	} else {
+		r.Username.RecentActivity = "No recent activity detected"
 	}
 
 	r.Username.Networks = results

@@ -80,28 +80,28 @@ func formatForFile(r core.Result) string {
 		}
 
 	case core.KindIP:
-	// Match required output format exactly
-	if r.IP.ISP != "" {
-		b.WriteString(fmt.Sprintf("ISP: %s\n", r.IP.ISP))
-	}
-	if r.IP.City != "" {
-		b.WriteString(fmt.Sprintf("City: %s\n", r.IP.City))
-	}
-	if r.IP.Country != "" {
-		b.WriteString(fmt.Sprintf("Country: %s\n", r.IP.Country))
-	}
-	if r.IP.ASN != "" {
-		b.WriteString(fmt.Sprintf("ASN: %s\n", r.IP.ASN))
-	}
-	if r.IP.Lat != 0 || r.IP.Lon != 0 {
-		b.WriteString(fmt.Sprintf("Lat/Lon: %.4f / %.4f\n", r.IP.Lat, r.IP.Lon))
-	}
-	// Abuse data
-	if r.IP.KnownIssues != "" {
-		b.WriteString(fmt.Sprintf("Known Issues: %s\n", r.IP.KnownIssues))
-	} else {
-		b.WriteString("Known Issues: No reported abuse\n")
-	}
+		// Match required output format exactly
+		if r.IP.ISP != "" {
+			b.WriteString(fmt.Sprintf("ISP: %s\n", r.IP.ISP))
+		}
+		if r.IP.City != "" {
+			b.WriteString(fmt.Sprintf("City: %s\n", r.IP.City))
+		}
+		if r.IP.Country != "" {
+			b.WriteString(fmt.Sprintf("Country: %s\n", r.IP.Country))
+		}
+		if r.IP.ASN != "" {
+			b.WriteString(fmt.Sprintf("ASN: %s\n", r.IP.ASN))
+		}
+		if r.IP.Lat != 0 || r.IP.Lon != 0 {
+			b.WriteString(fmt.Sprintf("Lat/Lon: %.4f / %.4f\n", r.IP.Lat, r.IP.Lon))
+		}
+		// Abuse data
+		if r.IP.KnownIssues != "" {
+			b.WriteString(fmt.Sprintf("Known Issues: %s\n", r.IP.KnownIssues))
+		} else {
+			b.WriteString("Known Issues: No reported abuse\n")
+		}
 
 	case core.KindUsername:
 		for _, n := range r.Username.Networks {
@@ -109,23 +109,30 @@ func formatForFile(r core.Result) string {
 			if n.Found {
 				val = "Found"
 			}
-			// Use Title case for network names (Facebook, Twitter, etc.)
+
 			name := n.Name
 			if len(name) > 0 {
 				name = strings.ToUpper(name[:1]) + name[1:]
 			}
-			b.WriteString(fmt.Sprintf("%s: %s\n", name, val))
+
+			b.WriteString(fmt.Sprintf("%s: %s", name, val))
+			if n.Followers != "" {
+				b.WriteString(fmt.Sprintf(" (%s followers)", n.Followers))
+			}
+			b.WriteString("\n")
+
+			if n.ProfileInfo != "" {
+				b.WriteString(fmt.Sprintf("  Bio: %s\n", n.ProfileInfo))
+			}
+			if n.URL != "" {
+				b.WriteString(fmt.Sprintf("  URL: %s\n", n.URL))
+			}
 		}
 
-	case core.KindFullName:
-		b.WriteString(fmt.Sprintf("First name: %s\n", r.FullName.FirstName))
-		b.WriteString(fmt.Sprintf("Last name: %s\n", r.FullName.LastName))
-		if r.FullName.Address != "" {
-			b.WriteString(fmt.Sprintf("Address: %s\n", r.FullName.Address))
+		if r.Username.RecentActivity != "" {
+			b.WriteString(fmt.Sprintf("\nRecent Activity: %s\n", r.Username.RecentActivity))
 		}
-		if r.FullName.Phone != "" {
-			b.WriteString(fmt.Sprintf("Number: %s\n", r.FullName.Phone))
-		}
+
 	}
 
 	b.WriteString(fmt.Sprintf("\nData saved in result file\n"))

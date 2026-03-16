@@ -19,15 +19,7 @@ func PrintResult(w io.Writer, r core.Result) {
 	}
 
 	switch r.Kind {
-	case core.KindFullName:
-		fmt.Fprintf(w, "First name: %s\n", r.FullName.FirstName)
-		fmt.Fprintf(w, "Last name: %s\n", r.FullName.LastName)
-		if r.FullName.Address != "" {
-			fmt.Fprintf(w, "Address: %s\n", r.FullName.Address)
-		}
-		if r.FullName.Phone != "" {
-			fmt.Fprintf(w, "Number: %s\n", r.FullName.Phone)
-		}
+	
 
 	case core.KindIP:
 		if r.IP.ISP != "" {
@@ -53,19 +45,31 @@ func PrintResult(w io.Writer, r core.Result) {
 		}
 
 	case core.KindUsername:
-		for _, n := range r.Username.Networks {
-			val := "no"
-			if n.Found {
-				val = "yes"
-			}
-
-			name := n.Name
-			if len(name) > 0 {
-				name = strings.ToUpper(name[:1]) + name[1:]
-			}
-
-			fmt.Fprintf(w, "%s : %s\n", name, val)
+	for _, n := range r.Username.Networks {
+		val := "Not Found"
+		if n.Found {
+			val = "Found"
 		}
+		
+		name := n.Name
+		if len(name) > 0 {
+			name = strings.ToUpper(name[:1]) + name[1:]
+		}
+		
+		fmt.Fprintf(w, "%s: %s", name, val)
+		if n.Followers != "" {
+			fmt.Fprintf(w, " (%s followers)", n.Followers)
+		}
+		fmt.Fprintln(w)
+		
+		if n.ProfileInfo != "" {
+			fmt.Fprintf(w, "  Bio: %s\n", n.ProfileInfo)
+		}
+	}
+	
+	if r.Username.RecentActivity != "" {
+		fmt.Fprintf(w, "\nRecent Activity: %s\n", r.Username.RecentActivity)
+	}
 
 	case core.KindDomain: // NEW: Add domain output
 		fmt.Fprintf(w, "Main Domain: %s\n", r.Input)
