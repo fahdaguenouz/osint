@@ -28,12 +28,18 @@ func checkRedditJSON(ctx context.Context, client *http.Client, handle string) (b
 	data := string(body)
 
 	// Not found check
-	if strings.Contains(data, `"error": 404`) {
+	// ❌ Deleted / Not Found
+	if strings.Contains(data, `"error": 404`) ||
+		strings.Contains(data, `"message": "Not Found"`) ||
+		!strings.Contains(data, `"kind": "t2"`) {
 		return false, "", "", "", nil, ""
 	}
 
 	// Extract fields manually (keep your style)
 	name := extractBetween(data, `"name":"`, `"`, 100)
+	if name == "" {
+		return false, "", "", "", nil, ""
+	}
 	bio := extractBetween(data, `"public_description":"`, `"`, 200)
 	karma := extractBetween(data, `"total_karma":`, ",", 20)
 
