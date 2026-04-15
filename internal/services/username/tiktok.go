@@ -1,158 +1,262 @@
 package username
 
 import (
-	"compress/gzip"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"osint/internal/core"
+	"regexp"
 	"strings"
+	"time"
+
+	"github.com/playwright-community/playwright-go"
 )
 
-// --- TIKTOK (OEmbed & Direct HTML Scraping) ---
-func checkTikTokWithOEmbed(ctx context.Context, client *http.Client, handle string) (bool, string, string, string, []core.Post, string) {
-	oembedURL := fmt.Sprintf("https://www.tiktok.com/oembed?url=https://www.tiktok.com/@%s", handle)
+// --- TIKTOK (Enhanced with Multiple Techniques) ---
+func scrapeTikTokPlaywright(page playwright.Page, url, handle string) (bool, string, string, string, []core.Post, string) {
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, oembedURL, nil)
+	// TECHNIQUE 1: Try mobile user-agent (less restrictive)
+	mobileUserAgent := "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
+
+	page.SetExtraHTTPHeaders(map[string]string{
+		"Accept-Language": "en-US,en;q=0.9",
+		"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"User-Agent":      mobileUserAgent,
+		"Referer":         "https://www.tiktok.com/",
+	})
+
+	// Enhanced stealth to bypass TikTok's bot detection
+	page.AddInitScript(playwright.Script{
+		Content: playwright.String(`
+			// Override navigator.webdriver
+			Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+			delete window.__playwright;
+			
+			// Fake Chrome runtime
+			window.chrome = { runtime: {} };
+			
+			// Override permissions
+			const originalQuery = window.navigator.permissions.query;
+			window.navigator.permissions.query = (parameters) => (
+				parameters.name === 'notifications' ?
+					Promise.resolve({ state: Notification.permission }) :
+					originalQuery(parameters)
+			);
+			
+			// Add fake plugins
+			Object.defineProperty(navigator, 'plugins', {
+				get: () => [1, 2, 3, 4, 5]
+			});
+			
+			// Override languages
+			Object.defineProperty(navigator, 'languages', {
+				get: () => ['en-US', 'en']
+			});
+			
+			// Fake screen dimensions
+			Object.defineProperty(screen, 'width', { get: () => 375 });
+			Object.defineProperty(screen, 'height', { get: () => 812 });
+		`),
+	})
+
+	// Navigate with longer timeout for TikTok's heavy JS
+	_, err := page.Goto(url, playwright.PageGotoOptions{
+		WaitUntil: playwright.WaitUntilStateNetworkidle,
+		Timeout:   playwright.Float(25000),
+	})
 	if err != nil {
-		return false, "", "", "", nil, "tiktok: request failed"
+		// Try fallback API method
+		return scrapeTikTokAPI(handle)
 	}
 
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-	req.Header.Set("Accept", "application/json")
+	// Long wait for TikTok's dynamic content
+	page.WaitForTimeout(5000)
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return false, "", "", "", nil, "tiktok: connection failed"
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return checkTikTokDirect(ctx, client, handle)
+	// Handle common TikTok popups
+	popupSelectors := []string{
+		`button[aria-label="Close"]`,
+		`div[class*="close"]`,
+		`svg[class*="close"]`,
+		`[data-e2e="close"]`,
 	}
 
-	var data struct {
-		AuthorName string `json:"author_name"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil || data.AuthorName == "" {
-		return checkTikTokDirect(ctx, client, handle)
-	}
-
-	profileInfo := data.AuthorName
-	followers, posts := fetchTikTokStats(ctx, client, handle)
-
-	return true, profileInfo, followers, "", posts, ""
-}
-
-func fetchTikTokStats(ctx context.Context, client *http.Client, handle string) (string, []core.Post) {
-	url := fmt.Sprintf("https://www.tiktok.com/@%s", handle)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", nil
-	}
-
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
-	req.Header.Set("Referer", "https://www.google.com/")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", nil
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return "", nil
-	}
-
-	var reader io.Reader = resp.Body
-	if resp.Header.Get("Content-Encoding") == "gzip" {
-		gzReader, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return "", nil
+	for _, sel := range popupSelectors {
+		btn := page.Locator(sel)
+		if count, _ := btn.Count(); count > 0 {
+			btn.First().Click()
+			page.WaitForTimeout(500)
 		}
-		defer gzReader.Close()
-		reader = gzReader
 	}
 
-	snippet, _ := io.ReadAll(io.LimitReader(reader, 256*1024))
-	text := string(snippet)
+	// Check for verification/CAPTCHA
+	title, _ := page.Title()
+	currentURL := page.URL()
 
-	followers := extractField(text, `"followerCount":`, `,`)
-	if followers == "" {
-		followers = extractField(text, `"fans":`, `,`)
-	}
-	if followers == "" {
-		followers = extractField(text, `"stats":{"followerCount":`, `}`)
-	}
-
-	var posts []core.Post
-	videoDates := extractAllMatches(text, `"createTime":"(\d{10})"`)
-	for i, ts := range videoDates {
-		if i >= 3 {
-			break
-		}
-		posts = append(posts, core.Post{
-			Content:  fmt.Sprintf("Video %d", i+1),
-			Date:     unixToDate(ts),
-			Platform: "TikTok",
-		})
+	if strings.Contains(title, "Verify") ||
+		strings.Contains(title, "CAPTCHA") ||
+		strings.Contains(title, "Robot") ||
+		strings.Contains(currentURL, "/captcha/") {
+		// Try fallback API method
+		return scrapeTikTokAPI(handle)
 	}
 
-	return followers, posts
-}
-
-
-
-
-func checkTikTokDirect(ctx context.Context, client *http.Client, handle string) (bool, string, string, string, []core.Post, string) {
-	url := fmt.Sprintf("https://www.tiktok.com/@%s", handle)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return false, "", "", "", nil, "tiktok: failed"
-	}
-
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return false, "", "", "", nil, "tiktok: connection error"
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == 404 {
+	// Check for not found
+	if strings.Contains(title, "Not Found") ||
+		strings.Contains(title, "404") ||
+		strings.Contains(title, "Couldn't find this account") {
 		return false, "", "", "", nil, ""
 	}
 
-	snippet, _ := io.ReadAll(io.LimitReader(resp.Body, 128*1024))
-	text := string(snippet)
-	html := strings.ToLower(text)
+	// Extract profile info
+	var displayName, bioText, followers, following, likes string
 
-	notFoundPatterns := []string{
-		"couldn't find this account",
-		"couldn&#39;t find this account",
-		"user not found",
-		"account not found",
+	// Strategy 1: Meta tags
+	metaTitle, _ := page.Locator(`meta[property="og:title"]`).GetAttribute("content")
+	if metaTitle != "" {
+		displayName = strings.TrimSpace(metaTitle)
 	}
-	for _, pattern := range notFoundPatterns {
-		if strings.Contains(html, pattern) {
-			return false, "", "", "", nil, ""
+
+	metaDesc, _ := page.Locator(`meta[property="og:description"]`).GetAttribute("content")
+	if metaDesc != "" {
+		bioText = strings.TrimSpace(metaDesc)
+	}
+
+	// Strategy 2: Try TikTok specific data attributes
+	if displayName == "" {
+		nameSelectors := []string{
+			`[data-e2e="user-title"]`,
+			`[data-e2e="user-subtitle"]`,
+			`h1`,
+			`h2`,
+		}
+		for _, sel := range nameSelectors {
+			if text, err := page.Locator(sel).First().InnerText(); err == nil && text != "" {
+				displayName = strings.TrimSpace(text)
+				break
+			}
 		}
 	}
 
-	if strings.Contains(text, `"uniqueId":"`+handle+`"`) ||
-		strings.Contains(text, `"uniqueId": "`+handle+`"`) ||
-		strings.Contains(text, `userInfo`) {
-		followers, posts := fetchTikTokStats(ctx, client, handle)
-		return true, "", followers, "", posts, "tiktok: limited data"
+	// Strategy 3: Extract stats from page content
+	pageText, _ := page.Locator(`body`).InnerText()
+	if pageText != "" {
+		// Followers
+		followersRegex := regexp.MustCompile(`(?i)([\d,.]+[KMBkmb]?)\s+followers?`)
+		if match := followersRegex.FindStringSubmatch(pageText); len(match) >= 2 {
+			followers = match[1]
+		}
+
+		// Following
+		followingRegex := regexp.MustCompile(`(?i)([\d,.]+[KMBkmb]?)\s+following`)
+		if match := followingRegex.FindStringSubmatch(pageText); len(match) >= 2 {
+			following = match[1]
+		}
+
+		// Likes
+		likesRegex := regexp.MustCompile(`(?i)([\d,.]+[KMBkmb]?)\s+likes?`)
+		if match := likesRegex.FindStringSubmatch(pageText); len(match) >= 2 {
+			likes = match[1]
+		}
 	}
 
-	return false, "", "", "", nil, "tiktok: profile not found"
+	// Strategy 4: Try to extract from JSON-LD or embedded data
+	jsonLD, _ := page.Locator(`script[type="application/ld+json"]`).InnerText()
+	if jsonLD != "" {
+		// Parse JSON-LD for profile info
+		var ldData map[string]interface{}
+		if err := json.Unmarshal([]byte(jsonLD), &ldData); err == nil {
+			if name, ok := ldData["name"].(string); ok && name != "" {
+				displayName = name
+			}
+			if desc, ok := ldData["description"].(string); ok && desc != "" {
+				bioText = desc
+			}
+		}
+	}
+
+	if displayName == "" {
+		// Try fallback API method
+		return scrapeTikTokAPI(handle)
+	}
+
+	// Build profile info
+	profileInfo := displayName
+	if bioText != "" {
+		if len(bioText) > 200 {
+			bioText = bioText[:200] + "..."
+		}
+		profileInfo += " | " + bioText
+	}
+
+	// Build followers string with all stats
+	var statsParts []string
+	if followers != "" {
+		statsParts = append(statsParts, followers+" followers")
+	}
+	if following != "" {
+		statsParts = append(statsParts, following+" following")
+	}
+	if likes != "" {
+		statsParts = append(statsParts, likes+" likes")
+	}
+	followersStr := strings.Join(statsParts, ", ")
+
+	return true, profileInfo, followersStr, "", nil, ""
+}
+
+// --- TIKTOK API FALLBACK (Unofficial) ---
+func scrapeTikTokAPI(handle string) (bool, string, string, string, []core.Post, string) {
+	// Try to use TikTok's oembed API or other public endpoints
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// Try oEmbed endpoint
+	oembedURL := fmt.Sprintf("https://www.tiktok.com/oembed?url=https://www.tiktok.com/@%s", handle)
+	
+	req, err := http.NewRequest(http.MethodGet, oembedURL, nil)
+	if err != nil {
+		return false, "", "", "", nil, "tiktok: api request failed"
+	}
+
+	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15")
+	req.Header.Set("Referer", "https://www.tiktok.com/")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, "", "", "", nil, "tiktok: api connection error"
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return false, "", "", "", nil, "tiktok: api returned non-200"
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, "", "", "", nil, "tiktok: api read failed"
+	}
+
+	var oembedData struct {
+		Title       string `json:"title"`
+		AuthorName  string `json:"author_name"`
+		AuthorURL   string `json:"author_url"`
+		ThumbnailURL string `json:"thumbnail_url"`
+	}
+
+	if err := json.Unmarshal(body, &oembedData); err != nil {
+		return false, "", "", "", nil, "tiktok: api json parse failed"
+	}
+
+	if oembedData.AuthorName == "" {
+		return false, "", "", "", nil, ""
+	}
+
+	profileInfo := oembedData.AuthorName
+	if oembedData.Title != "" {
+		profileInfo += " | " + oembedData.Title
+	}
+
+	return true, profileInfo, "", "", nil, "tiktok: limited data from api"
 }

@@ -18,7 +18,7 @@ func RouteScraper(ctx context.Context, client *http.Client, page playwright.Page
 	case "reddit":
 		return checkRedditJSON(ctx, client, handle)
 	case "tiktok":
-		return checkTikTokWithOEmbed(ctx, client, handle)
+		return scrapeTikTokPlaywright(page, url, handle)
 	case "medium":
 		return scrapeMediumPlaywright(page, url, handle)
 	case "youtube":
