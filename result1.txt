@@ -1,0 +1,20 @@
+OSINT-Master Report
+==================
+
+Query: 8.8.8.8
+Type: ip
+Timestamp: 2026-04-15T12:05:50+01:00
+
+Warnings:
+  - Abuse check skipped: no API key configured (set ABUSEIPDB_API_KEY for enhanced abuse checking)
+
+ISP: Google LLC
+City: Ashburn
+Country: United States
+ASN: AS15169 Google LLC
+Lat/Lon: 39.0300 / -77.5000
+Known Issues: No reported abuse
+
+Sources: ip-api.com
+
+Data saved in result file

@@ -1,0 +1,36 @@
+OSINT-Master Report
+==================
+
+Query: example.com
+Type: domain
+Timestamp: 2026-04-15T12:07:52+01:00
+
+Main Domain: example.com
+
+Subdomains found: 10
+  - user@example.com (IP: unresolved)
+    SSL Certificate: Not found
+  - as207960 test intermediate - example.com (IP: unresolved)
+    SSL Certificate: Not found
+  - subjectname@example.com (IP: unresolved)
+    SSL Certificate: Not found
+  - products.example.com (IP: unresolved)
+    SSL Certificate: Not found
+  - m.example.com (IP: unresolved)
+    SSL Certificate: Not found
+  - dev.example.com (IP: unresolved)
+    SSL Certificate: Not found
+  - support.example.com (IP: unresolved)
+    SSL Certificate: Not found
+  - example.com (IP: 104.20.23.154)
+    SSL Certificate: Valid until 2026-07-01
+  - www.example.com (IP: 172.66.147.243)
+    SSL Certificate: Valid until 2026-07-01
+  - m.testexample.com (IP: 13.248.169.48)
+    SSL Certificate: Not found
+
+Potential Subdomain Takeover Risks: None detected
+
+Sources: crt.sh, DNS resolution, SSL certificate check, CNAME analysis
+
+Data saved in result file

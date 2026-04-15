@@ -11,11 +11,10 @@ import (
 type Mode int
 
 const (
-	ModeNone Mode = iota
-	ModeFullName // -n
-	ModeIP       // -i
-	ModeUsername // -u
-	ModeDomain   // -d (NEW)
+	ModeNone     Mode = iota
+	ModeIP            // -i
+	ModeUsername      // -u
+	ModeDomain        // -d (NEW)
 )
 
 type Options struct {
@@ -29,7 +28,6 @@ func ParseArgs(args []string) (Options, bool, error) {
 	fs.SetOutput(io.Discard) // we print our own help
 
 	var (
-		n    string
 		i    string
 		u    string
 		d    string // NEW: domain
@@ -38,7 +36,6 @@ func ParseArgs(args []string) (Options, bool, error) {
 	)
 
 	// OSINT-Master compatible flags
-	fs.StringVar(&n, "n", "", "Search information by full name")
 	fs.StringVar(&i, "i", "", "Search information by IP address")
 	fs.StringVar(&u, "u", "", "Search information by username")
 	fs.StringVar(&d, "d", "", "Enumerate subdomains and check for takeover risks")
@@ -75,16 +72,10 @@ func ParseArgs(args []string) (Options, bool, error) {
 	// Check which flags were actually provided in raw args
 	// This is more reliable than checking if value != "" because
 	// empty values could be valid in some cases
-	nProvided := hasAny(args, "-n")
 	iProvided := hasAny(args, "-i")
 	uProvided := hasAny(args, "-u")
 	dProvided := hasAny(args, "-d")
 
-	if nProvided {
-		selected++
-		mode = ModeFullName
-		query = joinValueAndRest(n)
-	}
 	if iProvided {
 		selected++
 		mode = ModeIP
@@ -126,7 +117,6 @@ func PrintHelp(w io.Writer) {
 	fmt.Fprintln(w, "    -i  \"IP Address\"       Search information by IP address")
 	fmt.Fprintln(w, "    -u  \"Username\"         Search information by username")
 	fmt.Fprintln(w, "    -d  \"Domain\"           Enumerate subdomains and check for takeover risks")
-	fmt.Fprintln(w, "    -n  \"Full Name\"        Search information by full name")
 	fmt.Fprintln(w, "    -o  \"FileName\"         File name to save output")
 	fmt.Fprintln(w, "    --help                 Display this help message")
 }

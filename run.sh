@@ -11,7 +11,7 @@ echo "📁 Creating build directory..."
 mkdir -p "$BUILD_DIR"
 
 echo "☕ Building $APP_NAME..."
-go build -o "$BUILD_DIR/$APP_NAME" ./cmd/osint
+go build -o "$BUILD_DIR/$APP_NAME" ./cmd/osintmaster
 
 # echo "🚀 Running $APP_NAME..."
 # echo "--------------------------------"
