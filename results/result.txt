@@ -1,0 +1,154 @@
+OSINT-Master Report
+==================
+
+Query: google.com
+Type: domain
+Timestamp: 2026-04-19T17:26:23-04:00
+
+Warnings:
+  - dnsdumpster skipped/failed: could not extract CSRF token
+  - chaos skipped/failed: HTTP 404
+  - alienvault_otx skipped/failed: HTTP 429
+  - wayback skipped/failed: Get "https://web.archive.org/cdx/search/cdx?url=*.google.com/*&output=json&fl=original&collapse=urlkey": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+  - omnisint skipped/failed: Get "https://sonar.omnisint.io/subdomains/google.com": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+
+Main Domain: google.com
+
+Subdomains found: 55
+  - google.com (IP: 172.217.171.46)
+    SSL Certificate: Valid until 2026-06-22
+  - 1.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - adscreativestudio.google.com (IP: 216.58.205.174)
+    SSL Certificate: Valid until 2026-06-22
+  - adsense.google.com (IP: 142.251.142.142)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - adservice.google.com (IP: 142.251.142.130)
+    SSL Certificate: Valid until 2026-06-22
+  - adsdatahub.google.com (IP: 142.251.142.142)
+    SSL Certificate: Valid until 2026-06-22
+  - adssettings.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - captive.adservice.google.com (IP: 216.239.32.220)
+    SSL Certificate: Valid until 2026-06-22
+  - adstransparency.google.com (IP: 192.178.25.110)
+    SSL Certificate: Valid until 2026-06-22
+  - frame.ads-prod.qa.adz.google.com (IP: 192.178.223.129)
+    SSL Certificate: Valid until 2026-06-21
+  - 216-239-45-32.google.com (IP: 216.239.45.32)
+    SSL Certificate: Not found
+  - 216-239-45-10.google.com (IP: 216.239.45.10)
+    SSL Certificate: Not found
+  - 216-239-33-25.google.com (IP: 216.239.33.25)
+    SSL Certificate: Not found
+  - 216-239-45-36.google.com (IP: 216.239.45.36)
+    SSL Certificate: Not found
+  - 216-239-45-33.google.com (IP: 216.239.45.33)
+    SSL Certificate: Not found
+  - 216-239-45-4.google.com (IP: 216.239.45.4)
+    SSL Certificate: Not found
+  - 216-239-45-6.google.com (IP: 216.239.45.6)
+    SSL Certificate: Not found
+  - 216-239-45-8.google.com (IP: 216.239.45.8)
+    SSL Certificate: Not found
+  - adviser.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - adwords-sandbox.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - adx.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - advisor.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - www.adwords.google.com (IP: 74.125.133.102)
+    CNAME: adwords.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - adwords.google.com (IP: 74.125.133.100)
+    SSL Certificate: Valid until 2026-06-22
+  - borgmon.evenflow-test.adz.google.com (IP: 192.178.223.129)
+    SSL Certificate: Valid until 2026-06-21
+  - borgmon.evenflow.adz.google.com (IP: 192.178.223.129)
+    SSL Certificate: Valid until 2026-06-21
+  - frame.ads-devel.qa.adz.google.com (IP: 192.178.223.129)
+    SSL Certificate: Valid until 2026-06-21
+  - ads-nightly.qa.adz.google.com (IP: 192.178.223.129)
+    SSL Certificate: Valid until 2026-06-21
+  - frame.ads-nightly.qa.adz.google.com (IP: 172.217.76.129)
+    SSL Certificate: Valid until 2026-06-21
+  - area120.google.com (IP: 172.217.171.46)
+    SSL Certificate: Valid until 2026-06-22
+  - aa.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - actionscenter.google.com (IP: 172.217.171.46)
+    SSL Certificate: Valid until 2026-06-22
+  - 360suite.google.com (IP: 172.217.20.238)
+    SSL Certificate: Valid until 2026-06-22
+  - about.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - aboutme.google.com (IP: 172.217.171.46)
+    CNAME: plus.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - account.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - accelerator.google.com (IP: 172.217.22.46)
+    SSL Certificate: Valid until 2026-06-22
+  - actions.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - accounts.google.com (IP: 64.233.166.84)
+    SSL Certificate: Valid until 2026-06-22
+  - console.actions.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - academico.google.com (IP: 142.251.209.164)
+    CNAME: scholar.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - adplanner.google.com (IP: 142.251.140.238)
+    CNAME: www3.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - actualities.google.com (IP: 216.58.204.174)
+    CNAME: news.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - activity.google.com (IP: 64.233.166.101)
+    CNAME: history.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - admin.google.com (IP: 216.58.205.46)
+    SSL Certificate: Valid until 2026-06-22
+  - admob.google.com (IP: 108.177.15.139)
+    SSL Certificate: Valid until 2026-06-22
+  - admanager.google.com (IP: 142.250.74.174)
+    CNAME: admanager.l.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - ads.google.com (IP: 172.217.171.46)
+    SSL Certificate: Valid until 2026-06-22
+  - ads1.google.com (IP: 172.217.171.46)
+    CNAME: ads.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - www.ads.google.com (IP: 172.217.171.46)
+    CNAME: ads.google.com
+    SSL Certificate: Valid until 2026-06-22
+  - 66-102-14-1.google.com (IP: 66.102.14.1)
+    SSL Certificate: Not found
+  - time1.google.com (IP: 216.239.35.0)
+    SSL Certificate: Valid until 2026-06-22
+  - alt1.google.com (IP: 172.217.22.174)
+    SSL Certificate: Valid until 2026-06-22
+  - ns1.google.com (IP: 216.239.32.10)
+    SSL Certificate: Not found
+  - hedns1.google.com (IP: 216.239.36.10)
+    SSL Certificate: Not found
+
+Potential Subdomain Takeover Risks: None detected
+
+Sources: 10+ Public APIs, Brute Force, DNS Resolution, SSL check
+
+Data saved in result file

@@ -16,254 +16,109 @@ import (
 	"osint/src/core"
 )
 
-// ===================== GLOBALS =====================
+// ================= TAKEOVER PATTERNS =================
 
-var cache = make(map[string][]string)
-var cacheMutex sync.RWMutex
-
-var userAgents = []string{
-	"Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-	"Mozilla/5.0 (X11; Linux x86_64)",
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+var takeoverPatterns = []struct {
+	pattern string
+	service string
+}{
+	{"s3.amazonaws.com", "AWS S3 bucket"},
+	{"s3-website", "AWS S3 website"},
+	{"github.io", "GitHub Pages"},
+	{"herokuapp.com", "Heroku"},
+	{"wordpress.com", "WordPress.com"},
+	{"shopify.com", "Shopify"},
+	{"fastly.net", "Fastly"},
+	{"cloudfront.net", "AWS CloudFront"},
+	{"azurewebsites.net", "Azure Websites"},
+	{"firebaseapp.com", "Firebase"},
+	{"netlify.app", "Netlify"},
+	{"vercel.app", "Vercel"},
+	{"pages.dev", "Cloudflare Pages"},
 }
 
+// ================= GLOBALS =================
+
 var client = &http.Client{
-	Timeout: 25 * time.Second,
+	Timeout: 15 * time.Second,
 	Transport: &http.Transport{
 		DisableKeepAlives: true,
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
 	},
 }
 
-// ===================== MAIN =====================
+var userAgents = []string{
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+// ================= MAIN =================
 
 func Run(query string) (core.Result, error) {
 	domain := cleanDomain(query)
 
 	if !isValidDomain(domain) {
-		err := core.NewUserError("invalid domain")
+		err := fmt.Errorf("invalid domain format")
 		return core.Fail(core.KindDomain, domain, err), err
 	}
 
 	r := core.NewBaseResult(core.KindDomain, domain)
 	r.Domain.Domain = domain
 
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	// CACHE
-	cacheMutex.RLock()
-	if cached, ok := cache[domain]; ok {
-		cacheMutex.RUnlock()
-		return buildResult(ctx, r, cached), nil
-	}
-	cacheMutex.RUnlock()
-
 	var allSubs []string
+	var mu sync.Mutex
+	var wg sync.WaitGroup
 
-	// ===== SOURCE 1: CRT.SH =====
-	crtSubs, err := crtshWithRetry(ctx, domain)
-	if err != nil {
-		r.Warnings = append(r.Warnings, "crt.sh failed")
+	// Source runner helper
+	runSource := func(name string, fn func(context.Context, string) ([]string, error)) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			subs, err := fn(ctx, domain)
+			if err != nil {
+				mu.Lock()
+				r.Warnings = append(r.Warnings, fmt.Sprintf("%s skipped/failed: %v", name, err))
+				mu.Unlock()
+				return
+			}
+			mu.Lock()
+			allSubs = append(allSubs, subs...)
+			mu.Unlock()
+		}()
 	}
-	allSubs = append(allSubs, crtSubs...)
 
-	// ===== SOURCE 2: BUFFEROVER =====
-	bufSubs, err := bufferover(ctx, domain)
-	if err != nil {
-		r.Warnings = append(r.Warnings, "bufferover failed")
-	}
-	allSubs = append(allSubs, bufSubs...)
+	// ✅ ONLY 3 RELIABLE SOURCES
+	runSource("crt.sh", crtsh)              // Certificate transparency logs
+	runSource("hackertarget", hackertarget) // DNS enumeration
+	runSource("anubis", anubis)             // Subdomain database
 
-	// ===== SOURCE 3: HACKERTARGET =====
-	hackSubs, err := hackertarget(ctx, domain)
-	if err != nil {
-		r.Warnings = append(r.Warnings, "hackertarget failed")
-	}
-	allSubs = append(allSubs, hackSubs...)
+	wg.Wait()
 
-	// ===== SOURCE 4: BRUTE =====
+	// Append brute force guesses
 	allSubs = append(allSubs, bruteForce(domain)...)
 
+	// Clean the master list
 	allSubs = deduplicate(allSubs, domain)
-
-	if len(allSubs) > 10 {
-		cacheMutex.Lock()
-		cache[domain] = allSubs
-		cacheMutex.Unlock()
-	}
 
 	return buildResult(ctx, r, allSubs), nil
 }
 
-// ===================== CRT.SH =====================
-
-func crtshWithRetry(ctx context.Context, domain string) ([]string, error) {
-	var lastErr error
-
-	for i := 0; i < 3; i++ {
-		subs, err := crtsh(ctx, domain)
-		if err == nil && len(subs) > 0 {
-			return subs, nil
-		}
-		lastErr = err
-		time.Sleep(time.Duration(4+i*2) * time.Second)
-	}
-	return nil, lastErr
-}
-
-func crtsh(ctx context.Context, domain string) ([]string, error) {
-	time.Sleep(time.Duration(2+rand.Intn(3)) * time.Second)
-
-	url := fmt.Sprintf("https://crt.sh/?q=%%25.%s&output=json", domain)
-
-	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
-	req.Header.Set("User-Agent", userAgents[rand.Intn(len(userAgents))])
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("status %d", resp.StatusCode)
-	}
-
-	var data []struct {
-		NameValue string `json:"name_value"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, err
-	}
-
-	var subs []string
-
-	for _, d := range data {
-		for _, name := range strings.Split(d.NameValue, "\n") {
-			name = strings.TrimSpace(strings.ToLower(name))
-			name = strings.TrimPrefix(name, "*.")
-
-			if strings.Contains(name, domain) && isValidSubdomain(name) {
-				subs = append(subs, name)
-			}
-		}
-	}
-
-	return subs, nil
-}
-
-// ===================== BUFFEROVER =====================
-
-func bufferover(ctx context.Context, domain string) ([]string, error) {
-	url := fmt.Sprintf("https://dns.bufferover.run/dns?q=.%s", domain)
-
-	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
-	req.Header.Set("User-Agent", userAgents[rand.Intn(len(userAgents))])
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("status %d", resp.StatusCode)
-	}
-
-	var raw map[string][]string
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, err
-	}
-
-	var subs []string
-
-	parse := func(entries []string) {
-		for _, entry := range entries {
-			parts := strings.Split(entry, ",")
-			if len(parts) == 2 {
-				host := strings.TrimSpace(parts[1])
-				if strings.HasSuffix(host, domain) {
-					subs = append(subs, host)
-				}
-			}
-		}
-	}
-
-	if v, ok := raw["FDNS_A"]; ok {
-		parse(v)
-	}
-	if v, ok := raw["RDNS"]; ok {
-		parse(v)
-	}
-
-	if len(subs) == 0 {
-		return nil, fmt.Errorf("no data")
-	}
-
-	return subs, nil
-}
-
-// ===================== HACKERTARGET =====================
-
-func hackertarget(ctx context.Context, domain string) ([]string, error) {
-	url := fmt.Sprintf("https://api.hackertarget.com/hostsearch/?q=%s", domain)
-
-	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
-	req.Header.Set("User-Agent", userAgents[rand.Intn(len(userAgents))])
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	lines := strings.Split(string(body), "\n")
-
-	var subs []string
-	for _, line := range lines {
-		parts := strings.Split(line, ",")
-		if len(parts) == 2 {
-			host := strings.TrimSpace(parts[0])
-			if strings.HasSuffix(host, domain) {
-				subs = append(subs, host)
-			}
-		}
-	}
-
-	if len(subs) == 0 {
-		return nil, fmt.Errorf("no results")
-	}
-
-	return subs, nil
-}
-
-// ===================== BRUTE =====================
-
-func bruteForce(domain string) []string {
-	wordlist := []string{
-		"www", "mail", "api", "dev", "test", "admin", "beta",
-		"staging", "prod", "app", "portal", "dashboard",
-		"auth", "login", "cdn", "static", "img", "files",
-	}
-
-	var results []string
-	for _, w := range wordlist {
-		results = append(results, w+"."+domain)
-	}
-	return results
-}
-
-// ===================== BUILD RESULT =====================
+// ================= BUILD RESULT =================
 
 func buildResult(ctx context.Context, r core.Result, subs []string) core.Result {
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 15)
+	sem := make(chan struct{}, 25)
 	out := make(chan core.SubdomainInfo, len(subs))
 
 	for _, sub := range subs {
@@ -281,37 +136,66 @@ func buildResult(ctx context.Context, r core.Result, subs []string) core.Result 
 		close(out)
 	}()
 
-	for i := range out {
-		r.Domain.Subdomains = append(r.Domain.Subdomains, i)
+	for info := range out {
+		if info.IP != "" || info.CNAME != "" {
+			r.Domain.Subdomains = append(r.Domain.Subdomains, info)
+		}
 	}
 
-	r.Sources = []string{"crt.sh", "bufferover", "hackertarget", "dns brute-force"}
+	r.Sources = []string{"3 Public APIs", "Brute Force", "DNS Resolution", "SSL check"}
 	return r
 }
 
-// ===================== ANALYZE =====================
+// ================= ANALYZE =================
 
-func analyze(ctx context.Context, sub string) core.SubdomainInfo {
-	info := core.SubdomainInfo{Name: sub, TakeoverRisk: "none"}
-
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	ip, _ := net.DefaultResolver.LookupHost(ctx, sub)
-	if len(ip) > 0 {
-		info.IP = ip[0]
-		checkSSL(ctx, sub, ip[0], &info)
+func analyze(parentCtx context.Context, sub string) core.SubdomainInfo {
+	info := core.SubdomainInfo{
+		Name:         sub,
+		TakeoverRisk: "none",
 	}
 
+	ctx, cancel := context.WithTimeout(parentCtx, 4*time.Second)
+	defer cancel()
+
 	cname, _ := net.DefaultResolver.LookupCNAME(ctx, sub)
-	info.CNAME = strings.TrimSuffix(cname, ".")
+	cname = strings.TrimSuffix(cname, ".")
+	if cname != sub && cname != "" {
+		info.CNAME = cname
+	}
+
+	ips, _ := net.DefaultResolver.LookupHost(ctx, sub)
+	if len(ips) > 0 {
+		info.IP = ips[0]
+		checkSSL(sub, ips[0], &info)
+	}
+
+	if info.CNAME != "" {
+		checkTakeover(parentCtx, info.CNAME, &info)
+	}
 
 	return info
 }
 
-// ===================== SSL =====================
+// ================= TAKEOVER LOGIC =================
 
-func checkSSL(ctx context.Context, sub, ip string, info *core.SubdomainInfo) {
+func checkTakeover(ctx context.Context, cname string, info *core.SubdomainInfo) {
+	for _, tp := range takeoverPatterns {
+		if strings.Contains(cname, tp.pattern) {
+			lookupCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			_, err := net.DefaultResolver.LookupHost(lookupCtx, cname)
+			cancel()
+
+			if err != nil {
+				info.TakeoverRisk = fmt.Sprintf("CNAME points to non-existent %s (%s)", tp.service, cname)
+			}
+			return
+		}
+	}
+}
+
+// ================= SSL =================
+
+func checkSSL(sub, ip string, info *core.SubdomainInfo) {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, "443"), 3*time.Second)
 	if err != nil {
 		return
@@ -323,6 +207,8 @@ func checkSSL(ctx context.Context, sub, ip string, info *core.SubdomainInfo) {
 		InsecureSkipVerify: true,
 	})
 
+	tlsConn.SetDeadline(time.Now().Add(3 * time.Second))
+
 	if err := tlsConn.Handshake(); err == nil {
 		state := tlsConn.ConnectionState()
 		if len(state.PeerCertificates) > 0 {
@@ -332,23 +218,23 @@ func checkSSL(ctx context.Context, sub, ip string, info *core.SubdomainInfo) {
 	}
 }
 
-// ===================== HELPERS =====================
+// ================= HELPERS =================
 
 func deduplicate(list []string, root string) []string {
 	seen := map[string]struct{}{root: {}}
-	res := []string{root}
+	out := []string{root}
 
 	for _, v := range list {
-		v = strings.TrimSpace(v)
-		if v == "" {
+		v = strings.TrimSpace(strings.ToLower(v))
+		if v == "" || !strings.HasSuffix(v, root) {
 			continue
 		}
 		if _, ok := seen[v]; !ok {
 			seen[v] = struct{}{}
-			res = append(res, v)
+			out = append(out, v)
 		}
 	}
-	return res
+	return out
 }
 
 func cleanDomain(d string) string {
@@ -361,15 +247,94 @@ func cleanDomain(d string) string {
 }
 
 func isValidDomain(d string) bool {
-	return strings.Contains(d, ".")
+	if len(d) < 4 || !strings.Contains(d, ".") {
+		return false
+	}
+	return true
 }
 
-func isValidSubdomain(s string) bool {
-	if strings.Contains(s, "@") {
-		return false
+func bruteForce(domain string) []string {
+	wordlist := []string{
+		"www", "mail", "api", "dev", "test", "admin", "beta", "staging", "prod", "app",
+		"portal", "auth", "cdn", "static", "blog", "shop", "support", "docs", "ftp",
+		"vpn", "secure", "git", "jenkins", "gitlab", "jira", "db", "sql", "redis",
+		"s3", "backup", "demo", "sandbox", "internal", "mobile", "media", "video",
+		"ws", "chat", "monitor", "status", "health", "grafana", "kibana", "webmail",
 	}
-	if strings.Contains(s, " ") {
-		return false
+	var out []string
+	for _, w := range wordlist {
+		out = append(out, w+"."+domain)
 	}
-	return strings.Count(s, ".") >= 2
+	return out
+}
+
+// ================= API SOURCES (Only 3) =================
+
+func crtsh(ctx context.Context, domain string) ([]string, error) {
+	url := fmt.Sprintf("https://crt.sh/?q=%%25.%s&output=json", domain)
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req.Header.Set("User-Agent", userAgents[rand.Intn(len(userAgents))])
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+
+	var data []struct {
+		NameValue string `json:"name_value"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	var subs []string
+	for _, d := range data {
+		for _, name := range strings.Split(d.NameValue, "\n") {
+			name = strings.TrimPrefix(strings.TrimSpace(strings.ToLower(name)), "*.")
+			if strings.HasSuffix(name, domain) {
+				subs = append(subs, name)
+			}
+		}
+	}
+	return subs, nil
+}
+
+func hackertarget(ctx context.Context, domain string) ([]string, error) {
+	url := fmt.Sprintf("https://api.hackertarget.com/hostsearch/?q=%s", domain)
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var subs []string
+	for _, line := range strings.Split(string(body), "\n") {
+		parts := strings.Split(line, ",")
+		if len(parts) > 0 && strings.HasSuffix(parts[0], domain) {
+			subs = append(subs, parts[0])
+		}
+	}
+	return subs, nil
+}
+
+func anubis(ctx context.Context, domain string) ([]string, error) {
+	url := fmt.Sprintf("https://jldc.me/anubis/subdomains/%s", domain)
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+
+	var data []string
+	json.NewDecoder(resp.Body).Decode(&data)
+	return data, nil
 }
