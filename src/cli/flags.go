@@ -30,8 +30,8 @@ func ParseArgs(args []string) (Options, bool, error) {
 	var (
 		i    string
 		u    string
-		d    string // NEW: domain
-		o    string // NEW: output file
+		d    string
+		o    string
 		help bool
 	)
 
@@ -52,60 +52,38 @@ func ParseArgs(args []string) (Options, bool, error) {
 		return Options{}, true, nil
 	}
 
-	rest := fs.Args()
-
 	selected := 0
 	mode := ModeNone
 	query := ""
 
-	joinValueAndRest := func(val string) string {
-		parts := []string{}
-		if strings.TrimSpace(val) != "" {
-			parts = append(parts, val)
-		}
-		if len(rest) > 0 {
-			parts = append(parts, rest...)
-		}
-		return strings.TrimSpace(strings.Join(parts, " "))
-	}
-
-	// Check which flags were actually provided in raw args
-	// This is more reliable than checking if value != "" because
-	// empty values could be valid in some cases
-	iProvided := hasAny(args, "-i")
-	uProvided := hasAny(args, "-u")
-	dProvided := hasAny(args, "-d")
-
-	if iProvided {
+	// Check which flags were provided with values
+	if strings.TrimSpace(i) != "" {
 		selected++
 		mode = ModeIP
-		query = joinValueAndRest(i)
+		query = i
 	}
-	if uProvided {
+	if strings.TrimSpace(u) != "" {
 		selected++
 		mode = ModeUsername
-		query = joinValueAndRest(u)
+		query = u
 	}
-	if dProvided {
+	if strings.TrimSpace(d) != "" {
 		selected++
 		mode = ModeDomain
-		query = joinValueAndRest(d)
+		query = d
 	}
 
 	if selected == 0 {
-		return Options{}, true, nil // Show help
+		return Options{}, true, nil // Show help if no mode selected
 	}
 	if selected > 1 {
 		return Options{}, false, errors.New("choose only one option: -i, -u, or -d")
 	}
-	if strings.TrimSpace(query) == "" {
-		return Options{}, false, fmt.Errorf("missing value for selected option")
-	}
-
+	
 	return Options{
 		Mode:   mode,
-		Query:  query,
-		Output: o,
+		Query:  strings.TrimSpace(query),
+		Output: strings.TrimSpace(o),
 	}, false, nil
 }
 
@@ -119,18 +97,4 @@ func PrintHelp(w io.Writer) {
 	fmt.Fprintln(w, "    -d  \"Domain\"           Enumerate subdomains and check for takeover risks")
 	fmt.Fprintln(w, "    -o  \"FileName\"         File name to save output")
 	fmt.Fprintln(w, "    --help                 Display this help message")
-}
-
-// hasAny checks if any of the provided flag names exist in args
-// This detects if a flag was explicitly passed, even if its value is empty
-func hasAny(args []string, names ...string) bool {
-	for _, a := range args {
-		for _, n := range names {
-			// Check exact match or prefix with = for -flag=value syntax
-			if a == n || strings.HasPrefix(a, n+"=") {
-				return true
-			}
-		}
-	}
-	return false
 }

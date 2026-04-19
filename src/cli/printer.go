@@ -79,7 +79,7 @@ func PrintResult(w io.Writer, r core.Result) {
 				r.Username.LastPostDate)
 		}
 
-	case core.KindDomain: // NEW: Add domain output
+	case core.KindDomain: 
 		fmt.Fprintf(w, "Main Domain: %s\n", r.Input)
 		fmt.Fprintf(w, "\nSubdomains found: %d\n", len(r.Domain.Subdomains))
 
