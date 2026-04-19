@@ -9,7 +9,7 @@ import (
 )
 
 // --- YOUTUBE (Easier Alternative to LinkedIn) ---
-func scrapeYouTubePlaywright(page playwright.Page, url, handle string) (bool, string, string, string, []core.Post, string) {
+func scrapeYouTubePlaywright(page playwright.Page, url string) (bool, string, string, string, []core.Post, string) {
 
 	page.AddInitScript(playwright.Script{
 		Content: playwright.String(`

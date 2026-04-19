@@ -94,7 +94,7 @@ func Run(query string) (core.Result, error) {
 			}
 			page.WaitForTimeout(2000)
 
-			// حاول نغلق popup
+			// popup
 			btn := page.Locator(`svg[aria-label="Close"], button:has-text("Not Now")`)
 			if count, _ := btn.Count(); count > 0 {
 				btn.First().Click()

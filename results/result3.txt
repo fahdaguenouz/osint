@@ -1,0 +1,30 @@
+OSINT-Master Report
+==================
+
+Query: user
+Type: username
+Timestamp: 2026-04-19T17:42:15-04:00
+
+Warnings:
+  - medium: unable to extract profile data
+
+Reddit: Found (1 karma followers)
+  Bio: Author: user | Bio:  | Karma: 1 (Links: 1, Comments: 0)
+Github: Found (155 followers)
+  Recent Activity:
+    - This is a repository of the source code of various malware targeting the *nix (mostly Linux) oper... (2026-01-17)
+    - :wrench: My stuff (2025-10-26)
+    - simple terminal (2025-04-15)
+    - Bypass Paywalls web browser extension for Chrome and Firefox. (2024-08-19)
+Youtube: Not Found
+Instagram: Not Found
+Tiktok: Found
+ Author: Couldn’t find this account. Visit TikTok to discover more trending creators, hashtags, and sounds.
+Medium: Not Found
+
+Recent Activity: Active on: reddit, github, tiktok
+Last Post: This is a repository of the source code of various malware targeting the *nix (mostly Linux) oper... on GitHub (2026-01-17)
+
+Sources: Hybrid API & Playwright Scraper (Concurrent)
+
+Data saved in result file

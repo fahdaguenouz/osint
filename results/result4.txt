@@ -1,0 +1,37 @@
+OSINT-Master Report
+==================
+
+Query: fahdaguenouz
+Type: username
+Timestamp: 2026-04-19T17:45:17-04:00
+
+Reddit: Found (1 karma followers)
+  Bio: Author: FahdAguenouz | Bio:  | Karma: 1 (Links: 1, Comments: 0)
+Github: Found (72 followers)
+  Bio: const me = {
+  name: "Fahd Aguenouz",
+  age: 21,
+  role: "Full Stack Developer",
+  quote: "Building the web, one line at a time 🌍✨"
+};
+
+  Recent Activity:
+    - Repository: osint-master (2026-04-19)
+    - Repository: auto-machine (2026-04-18)
+    - Repository: image-inspector (2026-04-16)
+    - Repository: pentest-kit (2026-04-13)
+Instagram: Found (76 followers)
+  Bio: 76 followers, 721 following, 4 posts | Fähď Ăgűęnøůz (@fahdaguenouz) on Instagram: ""
+Medium: Found
+  Bio: Aguenouz Fahd | Read writing from Aguenouz Fahd on Medium. full stack dev
+Tiktok: Found (0 followers, 0 following, 0 likes followers)
+ Author: japan (@fahdaguenouz) | TikTok | japan (@fahdaguenouz) on TikTok | Watch the latest video from japan (@fahdaguenouz).
+Youtube: Found (1 followers)
+  Bio: Aguenouz Fahd
+
+Recent Activity: Active on: reddit, github, instagram, medium, tiktok, youtube
+Last Post: Repository: osint-master on GitHub (2026-04-19)
+
+Sources: Hybrid API & Playwright Scraper (Concurrent)
+
+Data saved in result file

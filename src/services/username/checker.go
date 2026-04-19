@@ -22,7 +22,7 @@ func RouteScraper(ctx context.Context, client *http.Client, page playwright.Page
 	case "medium":
 		return scrapeMediumPlaywright(page, url, handle)
 	case "youtube":
-		return scrapeYouTubePlaywright(page, url, handle)
+		return scrapeYouTubePlaywright(page, url)
 
 	// JS-heavy platforms - use the Playwright page
 	case "instagram":
