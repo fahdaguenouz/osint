@@ -118,10 +118,7 @@ For enhanced IP reputation checking, set an environment variable:
 export ABUSEIPDB_API_KEY="your_api_key_here"
 ```
 
-Or create a `.env` file:
-```bash
-ABUSEIPDB_API_KEY=your_api_key_here
-```
+
 
 > **Note:** The tool works without this key. Basic IP lookup uses ip-api.com (free, no key required).
 
